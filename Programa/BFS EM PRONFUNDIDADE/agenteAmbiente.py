@@ -1,57 +1,64 @@
 import random
-
-class Agente:
-    def __init__(self, localizacao):
-        self.desempenho = 0
-        self.localizacao = localizacao
-
-    def programa_reflex(self, percepcao):
-        localizacao, estado = percepcao
-        if estado == 'vazio':
-            return 'encher'
-        elif localizacao == 'A':
-            return 'direita'
-        elif localizacao == 'B':
-            return 'esquerda'
+from collections import deque
 
 class Ambiente:
     def __init__(self):
-        self.estado = {'A': random.choice(['cheio', 'vazio']),
-                       'B': random.choice(['cheio', 'vazio'])}
+        self.estado = {'Q1': random.choice(['cheio', 'vazio']),
+                       'Q2': random.choice(['cheio', 'vazio'])}
+        self.accao = ['encher', 'esquerda', 'direita']
 
     def percepcao(self, agente):
         return (agente.localizacao, self.estado[agente.localizacao])
 
     def localizacao_default(self):
-        return random.choice(['A', 'B'])
+        return random.choice(['Q1', 'Q2'])
 
-    def executar_accao(self, agente, accao):
+    def executar_accao(self, accao, agente):
         if accao == 'esquerda':
-            agente.desempenho -= 1
-            if agente.localizacao == 'A':
-                agente.localizacao = 'B'
+            agente.performace -= 1
         elif accao == 'direita':
-            agente.desempenho -= 1
-            if agente.localizacao == 'B':
-                agente.localizacao = 'A'
+            agente.performace -= 1
         elif accao == 'encher':
-            agente.desempenho += 10
-            self.estado[agente.localizacao] = 'cheio'
+            agente.performace += 10
+            self.estado[agente.localizacao] = "cheio"
 
-def dfs(ambiente, agente, visitados):
-    if 'vazio' not in ambiente.estado.values():
-        return agente.localizacao
+class Agente:
+    def __init__(self, localizacao):
+        self.performace = 0
+        self.localizacao = localizacao
 
-    visitados.add((agente.localizacao, tuple(ambiente.estado.values())))
+    def programa_tabela(self, percepcao):
 
-    for acao in ['encher', 'direita', 'esquerda']:
-        ambiente.estado['A'], ambiente.estado['B'] = tuple(ambiente.estado.values())
-        ambiente.executar_accao(agente, acao)
-        novo_estado = (agente.localizacao, tuple(ambiente.estado.values()))
+        tabela = {('Q1', 'cheio'): 'direita',
+                  ('Q1', 'vazio'): 'encher',
+                  ('Q2', 'cheio'): 'esquerda',
+                  ('Q2', 'vazio'): 'encher',
+                  (('Q1', 'vazio'), ('Q1', 'cheio')): 'esquerda',
+                  (('Q1', 'cheio'), ('Q2', 'vazio')): 'encher',
+                  (('Q2', 'cheio'), ('Q1', 'vazio')): 'encher',
+                  (('Q2', 'vazio'), ('Q2', 'cheio')): 'encher',
+                  (('Q1', 'vazio'), ('Q1', 'cheio'), ('Q2', 'vazio')): 'encher',
+                  (('Q2', 'vazio'), ('Q2', 'cheio'), ('Q1', 'vazio')): 'encher'}
 
-        if novo_estado not in visitados:
-            resultado = dfs(ambiente, agente, visitados)
-            if resultado:
-                return resultado
+        return tabela.get(percepcao)
+
+def dfs_search(ambiente, initial_state):
+    frontier = [initial_state]
+    explored = set()
+
+    while frontier:
+        state = frontier.pop()
+
+        if is_goal_state(state):
+            return state
+
+        explored.add(state)
+
+        for action in reversed(ambiente.accoes_possiveis(state)):
+            next_state = ambiente.resultado(state, action)
+            if next_state not in explored and next_state not in frontier:
+                frontier.append(next_state)
 
     return None
+def is_goal_state(state, ambiente):
+    return 'cheio' in state.values()
